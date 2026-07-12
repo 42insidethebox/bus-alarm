@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "BusBell",
+    "slug": "busbell",
+    "version": "1.0.0",
+    "scheme": "busbell",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "buildNumber": "1",
+      "bundleIdentifier": "com.busbell.app",
+      "infoPlist": { "NSLocationWhenInUseUsageDescription": "BusBell uses your location on-device to decide which reminders are relevant." }
+    },
+    "android": {
+      "package": "com.busbell.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#216A4A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-sqlite",
+      "expo-location",
+      ["expo-splash-screen", {
+        "backgroundColor": "#216A4A",
+        "image": "./assets/splash-icon.png",
+        "imageWidth": 240,
+        "dark": { "backgroundColor": "#111713", "image": "./assets/splash-icon.png" }
+      }]
+    ]
+  }
+}

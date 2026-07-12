@@ -1,0 +1,10 @@
+import React from 'react';
+import { Pressable, StyleSheet, Text, TextInput, TextInputProps, useColorScheme, View, ViewProps } from 'react-native';
+import { dark, palette } from './theme';
+
+export const useColors=()=>useColorScheme()==='dark'?dark:palette;
+export function Card(p:ViewProps){const c=useColors();return <View {...p} style={[s.card,{backgroundColor:c.card,borderColor:c.line},p.style]}/>}
+export function Button({title,onPress,kind='primary',disabled=false}:{title:string;onPress:()=>void;kind?:'primary'|'ghost'|'danger';disabled?:boolean}){const c=useColors();const bg=kind==='primary'?c.green:'transparent',color=kind==='primary'?c.card:kind==='danger'?c.danger:c.green;return <Pressable disabled={disabled} onPress={onPress} style={({pressed})=>[s.button,{backgroundColor:bg,borderColor:kind==='primary'?bg:c.line,opacity:disabled?.45:pressed?.7:1}]}><Text style={[s.buttonText,{color}]}>{title}</Text></Pressable>}
+export function Field({label,...props}:TextInputProps&{label:string}){const c=useColors();return <View style={{gap:7}}><Text style={[s.label,{color:c.muted}]}>{label}</Text><TextInput placeholderTextColor={c.muted} {...props} style={[s.input,{color:c.ink,backgroundColor:c.card,borderColor:c.line},props.style]}/></View>}
+export function Heading({children,sub}:{children:React.ReactNode;sub?:string}){const c=useColors();return <View style={{gap:5}}><Text style={[s.heading,{color:c.ink}]}>{children}</Text>{sub&&<Text style={[s.sub,{color:c.muted}]}>{sub}</Text>}</View>}
+const s=StyleSheet.create({card:{borderRadius:20,borderWidth:1,padding:18,gap:12},button:{minHeight:48,borderRadius:14,borderWidth:1,alignItems:'center',justifyContent:'center',paddingHorizontal:18},buttonText:{fontSize:16,fontWeight:'700'},label:{fontSize:13,fontWeight:'700',textTransform:'uppercase',letterSpacing:.5},input:{borderWidth:1,borderRadius:14,paddingHorizontal:14,minHeight:50,fontSize:16},heading:{fontSize:28,fontWeight:'800',letterSpacing:-.7},sub:{fontSize:15,lineHeight:21}});

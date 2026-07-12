@@ -1,0 +1,3 @@
+import{describe,expect,it}from'vitest';import{parseBackup}from'./backup';
+const valid={version:1,exportedAt:'2026-07-12',places:[],timetables:[{id:'t1',name:'Bus',times:['06:42'],days:[1,2],alertMinutes:5,enabled:true,locationId:null}]};
+describe('backup validation',()=>{it('accepts a valid backup',()=>expect(parseBackup(JSON.stringify(valid)).timetables).toHaveLength(1));it('rejects malformed JSON',()=>expect(()=>parseBackup('oops')).toThrow());it('rejects invalid departure times',()=>expect(()=>parseBackup(JSON.stringify({...valid,timetables:[{...valid.timetables[0],times:['25:99']}]}))).toThrow());});

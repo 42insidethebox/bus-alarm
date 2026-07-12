@@ -3,6 +3,18 @@
 
 > **Never miss your bus, train, or any recurring departure again.**
 
+## Run it
+
+Requires Node 22.13+ (Node 23 is not supported by React Native 0.86).
+
+```bash
+npm install
+npm run ios       # or: npm run android
+npm run typecheck
+```
+
+Use a development build for native notifications and location behavior. Expo Go can preview the interface, but native background behavior should be verified on a physical device.
+
 BusBell is an offline-first mobile application that reminds you before scheduled departures **only when you're at the locations you choose**.
 
 Instead of constantly checking transport apps or remembering complex schedules, BusBell quietly handles recurring timetables in the background and alerts you exactly when it's time to leave.
