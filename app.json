@@ -11,7 +11,10 @@
       "supportsTablet": true,
       "buildNumber": "1",
       "bundleIdentifier": "com.busbell.app",
-      "infoPlist": { "NSLocationWhenInUseUsageDescription": "BusBell uses your location on-device to decide which reminders are relevant." }
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "BusBell uses your location on-device to save the places you choose.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "BusBell uses geofences on-device to enable relevant reminders when you enter or leave your saved places."
+      }
     },
     "android": {
       "package": "com.busbell.app",
@@ -28,15 +31,58 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/busbell_chime.wav"],
+          "color": "#216A4A"
+        }
+      ],
       "expo-sqlite",
-      "expo-location",
-      ["expo-splash-screen", {
-        "backgroundColor": "#216A4A",
-        "image": "./assets/splash-icon.png",
-        "imageWidth": 240,
-        "dark": { "backgroundColor": "#111713", "image": "./assets/splash-icon.png" }
-      }]
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow BusBell to save the places you choose.",
+          "locationAlwaysAndWhenInUsePermission": "Allow BusBell to detect entry and exit for your saved places, even while the app is closed.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#216A4A",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 240,
+          "dark": {
+            "backgroundColor": "#111713",
+            "image": "./assets/splash-icon.png"
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow BusBell to choose a timetable image for private, offline recognition.",
+          "cameraPermission": "Allow BusBell to photograph a timetable for private, offline recognition.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-mlkit-ocr",
+        {
+          "iosEngine": "vision"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
+      "@maplibre/maplibre-react-native"
     ]
   }
 }

@@ -1,12 +1,276 @@
-import React,{useState}from'react';
-import{Alert,KeyboardAvoidingView,Platform,Pressable,ScrollView,StyleSheet,Switch,Text,View}from'react-native';
-import*as DocumentPicker from'expo-document-picker';import{File}from'expo-file-system';
-import{NativeStackScreenProps}from'@react-navigation/native-stack';
-import{Button,Card,Field,useColors}from'../ui';import{useStore}from'../store';import{RootStackParams,Timetable}from'../types';import{dayNames,id,parseTimes}from'../utils';
-export function TimetableEditor({route,navigation}:NativeStackScreenProps<RootStackParams,'TimetableEditor'>){
- const c=useColors(),{timetables,places,persistTimetable}=useStore(),old=timetables.find(t=>t.id===route.params?.id);
- const[name,setName]=useState(old?.name??''),[input,setInput]=useState(old?.times.join('\n')??''),[days,setDays]=useState(old?.days??[1,2,3,4,5]),[leads,setLeads]=useState((old?.alertMinutesList??[old?.alertMinutes??5]).join(', ')),[excluded,setExcluded]=useState(old?.excludedDates.join(', ')??''),[enabled,setEnabled]=useState(old?.enabled??true),[locationId,setLocationId]=useState<string|null>(old?.locationId??null);
- const importFile=async()=>{try{const result=await DocumentPicker.getDocumentAsync({type:['text/plain','text/csv','text/tab-separated-values'],copyToCacheDirectory:true});if(result.canceled)return;const text=await new File(result.assets[0].uri).text();if(!parseTimes(text).length)return Alert.alert('No times found','Use a text or CSV file containing times such as 06:42.');setInput(text);if(!name)setName(result.assets[0].name.replace(/\.[^.]+$/,''));}catch{Alert.alert('Import failed','BusBell could not read that file.')}};
- const save=async()=>{const times=parseTimes(input),alertMinutesList=[...new Set((leads.match(/\d+/g)??[]).map(Number))].filter(n=>n>=0&&n<=180).sort((a,b)=>b-a),excludedDates=[...new Set(excluded.split(/[\s,;]+/).filter(Boolean))];if(!name.trim()||!times.length)return Alert.alert('Missing information','Add a name and at least one valid time such as 06:42.');if(!days.length)return Alert.alert('Choose a day');if(!alertMinutesList.length)return Alert.alert('Invalid reminders','Enter one or more values from 0–180, such as 10, 5.');if(excludedDates.some(d=>!/^\d{4}-\d{2}-\d{2}$/.test(d)))return Alert.alert('Invalid excluded date','Use YYYY-MM-DD, for example 2026-12-25.');const t:Timetable={id:old?.id??id(),name:name.trim(),times,days:[...days].sort(),alertMinutes:alertMinutesList.at(-1)!,alertMinutesList,excludedDates,pausedUntil:old?.pausedUntil??null,enabled,locationId};await persistTimetable(t);navigation.goBack()};
- return <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView contentContainerStyle={s.page} keyboardShouldPersistTaps="handled"><Field label="Name" value={name} onChangeText={setName} placeholder="Bus 47 toward Lausanne"/><Field label="Departure times" value={input} onChangeText={setInput} placeholder={'06:42\n07:12\n07:42'} multiline style={{height:150,textAlignVertical:'top',paddingTop:14}}/><Button title="Import TXT or CSV" kind="ghost" onPress={()=>void importFile()}/><Text style={{color:c.muted}}>Paste times or import a file. BusBell finds, sorts and deduplicates valid times.</Text><Text style={[s.label,{color:c.ink}]}>Runs on</Text><View style={s.wrap}>{dayNames.map((d,i)=><Pressable key={d} onPress={()=>setDays(x=>x.includes(i)?x.filter(v=>v!==i):[...x,i])} style={[s.chip,{borderColor:c.line,backgroundColor:days.includes(i)?c.green:c.card}]}><Text style={{color:days.includes(i)?c.card:c.ink,fontWeight:'700'}}>{d}</Text></Pressable>)}</View><Field label="Reminder minutes" value={leads} onChangeText={setLeads} keyboardType="numbers-and-punctuation" placeholder="10, 5, 2"/><Text style={{color:c.muted}}>Use commas for multiple alerts: 10, 5, 2.</Text><Field label="Skip dates (optional)" value={excluded} onChangeText={setExcluded} placeholder="2026-12-25, 2027-01-01"/><Text style={[s.label,{color:c.ink}]}>Only near a saved place</Text><View style={s.wrap}><Pressable onPress={()=>setLocationId(null)} style={[s.chip,{borderColor:c.line,backgroundColor:locationId===null?c.green:c.card}]}><Text style={{color:locationId===null?c.card:c.ink}}>Anywhere</Text></Pressable>{places.map(p=><Pressable key={p.id} onPress={()=>setLocationId(p.id)} style={[s.chip,{borderColor:c.line,backgroundColor:locationId===p.id?c.green:c.card}]}><Text style={{color:locationId===p.id?c.card:c.ink}}>{p.name}</Text></Pressable>)}</View><Card><View style={s.between}><View><Text style={{color:c.ink,fontWeight:'700'}}>Timetable enabled</Text><Text style={{color:c.muted}}>Alarms are scheduled when on</Text></View><Switch value={enabled} onValueChange={setEnabled} trackColor={{true:c.green}}/></View></Card><Button title="Save timetable" onPress={()=>void save()}/></ScrollView></KeyboardAvoidingView>}
-const s=StyleSheet.create({page:{padding:20,gap:15},label:{fontSize:15,fontWeight:'800'},wrap:{flexDirection:'row',flexWrap:'wrap',gap:8},chip:{borderWidth:1,borderRadius:99,paddingVertical:10,paddingHorizontal:13},between:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}});
+import React, { useState } from "react";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Button, Card, Field, useColors } from "../ui";
+import { useStore } from "../store";
+import { RootStackParams, Timetable, timetableLocationIds } from "../types";
+import { dayNames, id, parseTimes } from "../utils";
+
+export function TimetableEditor({
+  route,
+  navigation,
+}: NativeStackScreenProps<RootStackParams, "TimetableEditor">) {
+  const c = useColors(),
+    { timetables, places, persistTimetable } = useStore(),
+    old = timetables.find((t) => t.id === route.params?.id);
+  const [name, setName] = useState(old?.name ?? ""),
+    [description, setDescription] = useState(old?.description ?? ""),
+    [input, setInput] = useState(old?.times.join("\n") ?? ""),
+    [days, setDays] = useState(old?.days ?? [1, 2, 3, 4, 5]),
+    [leads, setLeads] = useState(
+      (old?.alertMinutesList ?? [old?.alertMinutes ?? 5]).join(", "),
+    ),
+    [excluded, setExcluded] = useState(old?.excludedDates.join(", ") ?? ""),
+    [enabled, setEnabled] = useState(old?.enabled ?? true),
+    [locationIds, setLocationIds] = useState<string[]>(
+      old
+        ? timetableLocationIds(old)
+        : route.params?.placeId
+          ? [route.params.placeId]
+          : [],
+    ),
+    [source, setSource] = useState<Timetable["source"]>(
+      old?.source ?? "manual",
+    );
+  const importFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["text/plain", "text/csv", "text/tab-separated-values"],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const text = await new File(result.assets[0].uri).text();
+      if (!parseTimes(text).length)
+        return Alert.alert(
+          "No times found",
+          "Use a text or CSV file containing times such as 06:42.",
+        );
+      setInput(text);
+      setSource("file");
+      if (!name) setName(result.assets[0].name.replace(/\.[^.]+$/, ""));
+    } catch {
+      Alert.alert("Import failed", "BusBell could not read that file.");
+    }
+  };
+  const save = async () => {
+    const times = parseTimes(input),
+      alertMinutesList = [...new Set((leads.match(/\d+/g) ?? []).map(Number))]
+        .filter((n) => n >= 0 && n <= 180)
+        .sort((a, b) => b - a),
+      excludedDates = [...new Set(excluded.split(/[\s,;]+/).filter(Boolean))];
+    if (!name.trim() || !times.length)
+      return Alert.alert(
+        "Missing information",
+        "Add a name and at least one valid time such as 06:42.",
+      );
+    if (!days.length) return Alert.alert("Choose a day");
+    if (!alertMinutesList.length)
+      return Alert.alert(
+        "Invalid reminders",
+        "Enter one or more values from 0–180, such as 10, 5.",
+      );
+    if (excludedDates.some((d) => !/^\d{4}-\d{2}-\d{2}$/.test(d)))
+      return Alert.alert(
+        "Invalid excluded date",
+        "Use YYYY-MM-DD, for example 2026-12-25.",
+      );
+    const t: Timetable = {
+      id: old?.id ?? id(),
+      name: name.trim(),
+      description: description.trim(),
+      source,
+      times,
+      days: [...days].sort(),
+      alertMinutes: alertMinutesList.at(-1)!,
+      alertMinutesList,
+      excludedDates,
+      pausedUntil: old?.pausedUntil ?? null,
+      enabled,
+      locationIds,
+      locationId: locationIds[0] ?? null,
+    };
+    await persistTimetable(t);
+    navigation.goBack();
+  };
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={s.page}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Field
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          placeholder="Bus 47 toward Lausanne"
+        />
+        <Field
+          label="Description (optional)"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Weekday service toward town"
+        />
+        <Field
+          label="Departure times"
+          value={input}
+          onChangeText={setInput}
+          placeholder={"06:42\n07:12\n07:42"}
+          multiline
+          style={{ height: 150, textAlignVertical: "top", paddingTop: 14 }}
+        />
+        <Button
+          title="Import TXT or CSV"
+          kind="ghost"
+          onPress={() => void importFile()}
+        />
+        <Text style={{ color: c.muted }}>
+          Paste times or import a file. BusBell finds, sorts and deduplicates
+          valid times.
+        </Text>
+        <Text style={[s.label, { color: c.ink }]}>Runs on</Text>
+        <View style={s.wrap}>
+          {dayNames.map((d, i) => (
+            <Pressable
+              key={d}
+              onPress={() =>
+                setDays((x) =>
+                  x.includes(i) ? x.filter((v) => v !== i) : [...x, i],
+                )
+              }
+              style={[
+                s.chip,
+                {
+                  borderColor: c.line,
+                  backgroundColor: days.includes(i) ? c.green : c.card,
+                },
+              ]}
+            >
+              <Text
+                style={{
+                  color: days.includes(i) ? c.card : c.ink,
+                  fontWeight: "700",
+                }}
+              >
+                {d}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Field
+          label="Reminder minutes"
+          value={leads}
+          onChangeText={setLeads}
+          keyboardType="numbers-and-punctuation"
+          placeholder="10, 5, 2"
+        />
+        <Text style={{ color: c.muted }}>
+          Use commas for multiple alerts: 10, 5, 2.
+        </Text>
+        <Field
+          label="Skip dates (optional)"
+          value={excluded}
+          onChangeText={setExcluded}
+          placeholder="2026-12-25, 2027-01-01"
+        />
+        <Text style={[s.label, { color: c.ink }]}>Only near saved places</Text>
+        <Text style={{ color: c.muted }}>
+          Select one or more. The timetable is active near any selected place.
+        </Text>
+        <View style={s.wrap}>
+          <Pressable
+            onPress={() => setLocationIds([])}
+            style={[
+              s.chip,
+              {
+                borderColor: c.line,
+                backgroundColor: !locationIds.length ? c.green : c.card,
+              },
+            ]}
+          >
+            <Text style={{ color: !locationIds.length ? c.card : c.ink }}>
+              Anywhere
+            </Text>
+          </Pressable>
+          {places.map((p) => (
+            <Pressable
+              key={p.id}
+              onPress={() =>
+                setLocationIds((current) =>
+                  current.includes(p.id)
+                    ? current.filter((placeId) => placeId !== p.id)
+                    : [...current, p.id],
+                )
+              }
+              style={[
+                s.chip,
+                {
+                  borderColor: c.line,
+                  backgroundColor: locationIds.includes(p.id)
+                    ? c.green
+                    : c.card,
+                },
+              ]}
+            >
+              <Text
+                style={{
+                  color: locationIds.includes(p.id) ? c.card : c.ink,
+                }}
+              >
+                {p.name}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Card>
+          <View style={s.between}>
+            <View>
+              <Text style={{ color: c.ink, fontWeight: "700" }}>
+                Timetable enabled
+              </Text>
+              <Text style={{ color: c.muted }}>
+                Alarms are scheduled when on
+              </Text>
+            </View>
+            <Switch
+              value={enabled}
+              onValueChange={setEnabled}
+              trackColor={{ true: c.green }}
+            />
+          </View>
+        </Card>
+        <Button title="Save timetable" onPress={() => void save()} />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+const s = StyleSheet.create({
+  page: { padding: 20, gap: 15 },
+  label: { fontSize: 15, fontWeight: "800" },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
+    borderWidth: 1,
+    borderRadius: 99,
+    paddingVertical: 10,
+    paddingHorizontal: 13,
+  },
+  between: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+});

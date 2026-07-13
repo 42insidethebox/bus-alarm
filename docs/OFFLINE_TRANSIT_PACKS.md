@@ -1,7 +1,22 @@
 # Offline Transit and Map Packs
 
-Status: proposed architecture  
+Status: Phase 1 implemented; Phases 2–5 remain planned
 Last updated: 12 July 2026
+
+## Implementation snapshot
+
+Phase 1 is now present in the application:
+
+- User-selected GTFS ZIP import with compressed/expanded-size, file-count, compression-ratio and path-traversal defenses.
+- Strict RFC 4180 parsing, required-table/header checks, bounded rows and fields, ID and foreign-key validation, calendar/date exceptions, frequencies, shapes and `24:00+` service times.
+- Atomic feed staging/replacement in namespaced SQLite tables with source, checksum, validity, attribution and counts.
+- Offline nearby-stop search from current GPS coordinates or any user-created saved place, with feed and distance filters.
+- Stop, route, direction and headsign selection plus an exact multi-day review.
+- Linked timetables that preserve GTFS identity instead of flattening service into weekday/time arrays.
+- One shared, agency-timezone-aware occurrence model for Home and native notifications. Non-exact frequency service never creates fabricated alarms.
+- Feed deletion retains and disables linked timetable records; JSON backup and CSV export preserve link metadata.
+
+The implemented Phase 1 is map-free by design. Managed publisher downloads, a curated regional catalog, geometry rendering, MapLibre basemaps and realtime data are not yet implemented. Physical-device testing with representative large feeds is still a release gate.
 
 ## Decision summary
 
